@@ -1,18 +1,24 @@
 <script lang="ts">
     import * as chrono from 'chrono-node';
     import { onMount } from 'svelte';
-    import { Recurrence } from '../Recurrence';
+    import { Recurrence } from '../Task/Recurrence';
     import { getSettings, TASK_FORMATS } from '../Config/Settings';
     import { GlobalFilter } from '../Config/GlobalFilter';
-    import { Status } from '../Status';
-    import { Priority, Task } from '../Task';
-    import { doAutocomplete } from '../DateAbbreviations';
+    import { Status } from '../Statuses/Status';
+    import { Task } from '../Task/Task';
+    import { doAutocomplete } from '../lib/DateAbbreviations';
     import { TasksDate } from '../Scripting/TasksDate';
+    import { addDependencyToParent, ensureTaskHasId, generateUniqueId, removeDependency } from "../Task/TaskDependency";
+    import { replaceTaskWithTasks } from "../Obsidian/File";
+    import type { EditableTask } from "./EditableTask";
+    import Dependency from "./Dependency.svelte";
+    import { Priority } from '../Task/Priority';
 
     // These exported variables are passed in as props by TaskModal.onOpen():
     export let task: Task;
     export let onSubmit: (updatedTasks: Task[]) => void | Promise<void>;
     export let statusOptions: Status[];
+    export let allTasks: Task[];
 
     const {
         // NEW_TASK_FIELD_EDIT_REQUIRED
@@ -27,20 +33,8 @@
     } = TASK_FORMATS.tasksPluginEmoji.taskSerializer.symbols;
 
     let descriptionInput: HTMLTextAreaElement;
-    let editableTask: {
+    let editableTask: EditableTask = {
         // NEW_TASK_FIELD_EDIT_REQUIRED
-        description: string;
-        status: Status;
-        priority: 'none' | 'lowest' | 'low' | 'medium' | 'high' | 'highest';
-        recurrenceRule: string;
-        createdDate: string;
-        startDate: string;
-        scheduledDate: string;
-        dueDate: string;
-        doneDate: string;
-        cancelledDate: string,
-        forwardOnly: boolean;
-    } = {
         description: '',
         status: Status.TODO,
         priority: 'none',
@@ -51,7 +45,9 @@
         dueDate: '',
         doneDate: '',
         cancelledDate: '',
-        forwardOnly: true
+        forwardOnly: true,
+        blockedBy: [],
+        blocking: []
     };
 
     let isDescriptionValid: boolean = true;
@@ -81,7 +77,11 @@
     let withAccessKeys: boolean = true;
     let formIsValid: boolean = true;
 
-    // 'weekend' abbreviation ommitted due to lack of space.
+    let originalBlocking: Task[] = [];
+
+    let mountComplete = false;
+
+    // 'weekend' abbreviation omitted due to lack of space.
     let datePlaceholder =
         "Try 'Monday' or 'tomorrow', or [td|tm|yd|tw|nw|we] then space.";
 
@@ -199,6 +199,18 @@
         return date;
     }
 
+    async function serialiseTaskId(task: Task) {
+        if (task.id !== "") return task;
+
+        const tasksWithId = allTasks.filter(task => task.id !== "");
+
+        const updatedTask = ensureTaskHasId(task, tasksWithId.map(task => task.id));
+
+        await replaceTaskWithTasks({originalTask: task, newTasks: updatedTask});
+
+        return updatedTask;
+    }
+
     $: accesskey = (key: string) => withAccessKeys ? key : null;
     $: formIsValid = isDueDateValid && isRecurrenceValid && isScheduledDateValid && isStartDateValid && isDescriptionValid && isCancelledDateValid && isCreatedDateValid && isDoneDateValid;
     $: isDescriptionValid = editableTask.description.trim() !== '';
@@ -287,6 +299,18 @@
             priority = 'highest';
         }
 
+        const blockedBy: Task[] = [];
+
+        for (const taskId of task.blockedBy) {
+            const depTask = allTasks.find(cacheTask => cacheTask.id === taskId);
+
+            if (!depTask) continue;
+
+            blockedBy.push(depTask);
+        }
+
+        originalBlocking = allTasks.filter(cacheTask => cacheTask.blockedBy.includes(task.id));
+
         editableTask = {
             // NEW_TASK_FIELD_EDIT_REQUIRED
             description,
@@ -300,7 +324,12 @@
             doneDate: new TasksDate(task.doneDate).formatAsDate(),
             cancelledDate: new TasksDate(task.cancelledDate).formatAsDate(),
             forwardOnly: true,
+            blockedBy: blockedBy,
+            blocking: originalBlocking
         };
+
+        mountComplete = true;
+
         setTimeout(() => {
             descriptionInput.focus();
         }, 10);
@@ -334,7 +363,7 @@
         setTimeout(() => { editableTask.description = editableTask.description.replace(/[\r\n]+/g, ' ')}, 0);
     }
 
-    const _onSubmit = () => {
+    const _onSubmit = async () => {
         // NEW_TASK_FIELD_EDIT_REQUIRED
         let description = editableTask.description.trim();
         if (addGlobalFilterOnSave) {
@@ -380,6 +409,27 @@
                 parsedPriority = Priority.None;
         }
 
+        let blockedByWithIds = [];
+
+        for (const depTask of editableTask.blockedBy) {
+            const newDep = await serialiseTaskId(depTask);
+            blockedByWithIds.push(newDep);
+        }
+
+        let id = task.id;
+        let removedBlocking: Task[] = [];
+        let addedBlocking: Task[] = [];
+
+        if (editableTask.blocking.toString() !== originalBlocking.toString() || editableTask.blocking.length !== 0) {
+            if (task.id === "") {
+                id = generateUniqueId(allTasks.filter(task => task.id !== "").map(task => task.id));
+            }
+
+            removedBlocking = originalBlocking.filter(task => !editableTask.blocking.includes(task))
+
+            addedBlocking = editableTask.blocking.filter(task => !originalBlocking.includes(task))
+        }
+
         const updatedTask = new Task({
             // NEW_TASK_FIELD_EDIT_REQUIRED
             ...task,
@@ -393,7 +443,19 @@
             doneDate,
             createdDate,
             cancelledDate,
+            blockedBy: blockedByWithIds.map(task => task.id),
+            id
         });
+
+        for (const blocking of removedBlocking) {
+            const newParent = removeDependency(blocking, updatedTask)
+            await replaceTaskWithTasks({originalTask: blocking, newTasks: newParent});
+        }
+
+        for (const blocking of addedBlocking) {
+            const newParent = addDependencyToParent(blocking, updatedTask)
+            await replaceTaskWithTasks({originalTask: blocking, newTasks: newParent});
+        }
 
         onSubmit([updatedTask]);
     };
@@ -461,10 +523,11 @@
                 id="recurrence"
                 type="text"
                 class:tasks-modal-error={!isRecurrenceValid}
+                class="input"
                 placeholder="Try 'every 2 weeks on Thursday'."
                 accesskey={accesskey("r")}
             />
-            <code>{recurrenceSymbol} {@html parsedRecurrence}</code>
+            <code class="results">{recurrenceSymbol} {@html parsedRecurrence}</code>
 
             <!-- --------------------------------------------------------------------------- -->
             <!--  Due Date  -->
@@ -475,11 +538,12 @@
                 bind:value={editableTask.dueDate}
                 id="due"
                 type="text"
+                class="input"
                 class:tasks-modal-error={!isDueDateValid}
                 placeholder={datePlaceholder}
                 accesskey={accesskey("d")}
             />
-            <code>{dueDateSymbol} {@html parsedDueDate}</code>
+            <code class="results">{dueDateSymbol} {@html parsedDueDate}</code>
 
             <!-- --------------------------------------------------------------------------- -->
             <!--  Scheduled Date  -->
@@ -491,10 +555,11 @@
                 id="scheduled"
                 type="text"
                 class:tasks-modal-error={!isScheduledDateValid}
+                class="input"
                 placeholder={datePlaceholder}
                 accesskey={accesskey("s")}
             />
-            <code>{scheduledDateSymbol} {@html parsedScheduledDate}</code>
+            <code class="results">{scheduledDateSymbol} {@html parsedScheduledDate}</code>
 
             <!-- --------------------------------------------------------------------------- -->
             <!--  Start Date  -->
@@ -506,10 +571,11 @@
                 id="start"
                 type="text"
                 class:tasks-modal-error={!isStartDateValid}
+                class="input"
                 placeholder={datePlaceholder}
                 accesskey={accesskey("a")}
             />
-            <code>{startDateSymbol} {@html parsedStartDate}</code>
+            <code class="results">{startDateSymbol} {@html parsedStartDate}</code>
 
             <!-- --------------------------------------------------------------------------- -->
             <!--  Only future dates  -->
@@ -522,10 +588,28 @@
                     bind:checked={editableTask.forwardOnly}
                     id="forwardOnly"
                     type="checkbox"
-                    class="task-list-item-checkbox tasks-modal-checkbox"
+                    class="input task-list-item-checkbox tasks-modal-checkbox"
                     accesskey={accesskey("f")}
                 />
             </div>
+
+            {#if allTasks.length > 0 && mountComplete}
+                <!-- --------------------------------------------------------------------------- -->
+                <!--  Blocked By Tasks  -->
+                <!-- --------------------------------------------------------------------------- -->
+                <label for="start">Blocked B<span class="accesskey">y</span></label>
+                <Dependency type="blockedBy" task={task} editableTask={editableTask} allTasks={allTasks}
+                            _onDescriptionKeyDown={_onDescriptionKeyDown} accesskey={accesskey} />
+
+                <!-- --------------------------------------------------------------------------- -->
+                <!--  Blocking Tasks  -->
+                <!-- --------------------------------------------------------------------------- -->
+                <label for="start" class="accesskey-first">Blocking</label>
+                <Dependency type="blocking" task={task} editableTask={editableTask} allTasks={allTasks}
+                            _onDescriptionKeyDown={_onDescriptionKeyDown} accesskey={accesskey} />
+            {:else}
+                <div><i>Blocking and blocked by fields are disabled when vault tasks is empty</i></div>
+            {/if}
         </div>
 
         <!-- --------------------------------------------------------------------------- -->
@@ -573,9 +657,10 @@
                 id="created"
                 type="text"
                 class:tasks-modal-error={!isCreatedDateValid}
+                class="input"
                 placeholder={datePlaceholder}
             />
-            <code>{createdDateSymbol} {@html parsedCreatedDate}</code>
+            <code class="results">{createdDateSymbol} {@html parsedCreatedDate}</code>
 
             <!-- --------------------------------------------------------------------------- -->
             <!--  Done Date  -->
@@ -586,9 +671,10 @@
                 id="done"
                 type="text"
                 class:tasks-modal-error={!isDoneDateValid}
+                class="input"
                 placeholder={datePlaceholder}
             />
-            <code>{doneDateSymbol} {@html parsedDoneDate}</code>
+            <code class="results">{doneDateSymbol} {@html parsedDoneDate}</code>
 
             <!-- --------------------------------------------------------------------------- -->
             <!--  Cancelled Date  -->
@@ -599,9 +685,10 @@
                 id="cancelled"
                 type="text"
                 class:tasks-modal-error={!isCancelledDateValid}
+                class="input"
                 placeholder={datePlaceholder}
             />
-            <code>{cancelledDateSymbol} {@html parsedCancelledDate}</code>
+            <code class="results">{cancelledDateSymbol} {@html parsedCancelledDate}</code>
         </div>
 
         <div class="tasks-modal-section tasks-modal-buttons">

@@ -3,7 +3,7 @@
  */
 
 import moment from 'moment';
-import { Status } from '../../src/Status';
+import { Status } from '../../src/Statuses/Status';
 
 import { TaskBuilder } from '../TestingTools/TaskBuilder';
 import { verifyMarkdownForDocs } from '../TestingTools/VerifyMarkdown';
@@ -88,6 +88,14 @@ describe('task', () => {
             'task.due.fromNow.name',
             'task.due.fromNow.sortOrder',
             'task.due.fromNow.groupText',
+        ]);
+    });
+
+    it('dependency fields', () => {
+        verifyFieldDataForReferenceDocs([
+            // force line break
+            'task.id',
+            'task.blockedBy',
         ]);
     });
 

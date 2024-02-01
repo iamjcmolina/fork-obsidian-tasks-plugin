@@ -2,12 +2,12 @@
  * @jest-environment jsdom
  */
 import moment from 'moment';
-import { Priority } from '../../src/Task';
 import { RecurrenceBuilder } from '../TestingTools/RecurrenceBuilder';
 import { TaskBuilder } from '../TestingTools/TaskBuilder';
 import { DATAVIEW_SYMBOLS, DataviewTaskSerializer } from '../../src/TaskSerializer/DataviewTaskSerializer';
-import type { Task } from '../../src/Task';
+import type { Task } from '../../src/Task/Task';
 import type { TaskDetails } from '../../src/TaskSerializer';
+import { Priority } from '../../src/Task/Priority';
 
 jest.mock('obsidian');
 window.moment = moment;
@@ -269,7 +269,7 @@ describe('DataviewTaskSerializer', () => {
             const task = TaskBuilder.createFullyPopulatedTask();
             const serialized = serialize(task);
             expect(serialized).toMatchInlineSnapshot(
-                '"Do exercises #todo #health  [priority:: medium]  [repeat:: every day when done]  [created:: 2023-07-01]  [start:: 2023-07-02]  [scheduled:: 2023-07-03]  [due:: 2023-07-04]  [cancelled:: 2023-07-06]  [completion:: 2023-07-05] ^dcf64c"',
+                '"Do exercises #todo #health  [id:: abcdef]  [blockedBy:: 123456,abc123]  [priority:: medium]  [repeat:: every day when done]  [created:: 2023-07-01]  [start:: 2023-07-02]  [scheduled:: 2023-07-03]  [due:: 2023-07-04]  [cancelled:: 2023-07-06]  [completion:: 2023-07-05] ^dcf64c"',
             );
         });
     });

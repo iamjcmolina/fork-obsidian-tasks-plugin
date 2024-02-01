@@ -7,7 +7,7 @@ import type { FilterOrErrorMessage } from '../../../src/Query/Filter/FilterOrErr
 import { TaskBuilder } from '../../TestingTools/TaskBuilder';
 import { testFilter } from '../../TestingTools/FilterTestHelpers';
 import { expectTaskComparesAfter, expectTaskComparesBefore } from '../../CustomMatchers/CustomMatchersForSorting';
-import { SampleTasks } from '../../TestHelpers';
+import { SampleTasks } from '../../TestingTools/SampleTasks';
 
 window.moment = moment;
 
@@ -109,10 +109,10 @@ describe('grouping by done date', () => {
         const tasks = SampleTasks.withAllRepresentativeDoneDates();
 
         expect({ grouper, tasks }).groupHeadingsToBe([
+            '%%0%% Invalid done date',
             '2023-05-30 Tuesday',
             '2023-05-31 Wednesday',
             '2023-06-01 Thursday',
-            'Invalid date',
             'No done date',
         ]);
     });

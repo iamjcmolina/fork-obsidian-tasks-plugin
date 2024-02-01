@@ -1,7 +1,7 @@
 import type { DurationInputArg2, Moment, unitOfTime } from 'moment';
 import { Notice } from 'obsidian';
-import { TaskRegularExpressions } from '../Task';
 import { PropertyCategory } from '../lib/PropertyCategory';
+import { TaskRegularExpressions } from '../Task/TaskRegularExpressions';
 
 /**
  * TasksDate encapsulates a date, for simplifying the JavaScript expressions users need to
@@ -69,6 +69,9 @@ export class TasksDate {
         if (date.isSame(today, 'day')) {
             return new PropertyCategory('Today', 2);
         }
+        if (!date.isValid()) {
+            return new PropertyCategory('Invalid date', 0);
+        }
         return new PropertyCategory('Future', 3);
     }
 
@@ -82,6 +85,11 @@ export class TasksDate {
     }
 
     private fromNowOrder(date: moment.Moment) {
+        // Always put invalid dates first:
+        if (!date.isValid()) {
+            return 0;
+        }
+
         // Calculate a number that:
         //   - is the same for all dates with the same 'fromNow()' name,
         //   - sorts in ascending order of the date.

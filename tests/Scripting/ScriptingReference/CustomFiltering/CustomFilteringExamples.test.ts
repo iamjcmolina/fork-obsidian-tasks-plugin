@@ -3,15 +3,16 @@
  */
 
 import moment from 'moment';
-import type { Task } from '../../../../src/Task';
-import { SampleTasks, fromLine, fromLines } from '../../../TestHelpers';
+import type { Task } from '../../../../src/Task/Task';
+import { fromLine, fromLines } from '../../../TestingTools/TestHelpers';
+import { SampleTasks } from '../../../TestingTools/SampleTasks';
 import type { CustomPropertyDocsTestData, QueryInstructionLineAndDescription } from '../VerifyFunctionFieldSamples';
 import {
     verifyFunctionFieldFilterSamplesForDocs,
     verifyFunctionFieldFilterSamplesOnTasks,
 } from '../VerifyFunctionFieldSamples';
-import { StatusRegistry } from '../../../../src/StatusRegistry';
-import { StatusConfiguration } from '../../../../src/StatusConfiguration';
+import { StatusRegistry } from '../../../../src/Statuses/StatusRegistry';
+import { StatusConfiguration } from '../../../../src/Statuses/StatusConfiguration';
 
 window.moment = moment;
 
@@ -83,6 +84,14 @@ describe('dates', () => {
         [
             'task.due.advanced',
             [
+                [
+                    // comment to force line break
+                    `filter by function \\
+    const date = task.due.moment; \\
+    return date ? !date.isValid() : false;`,
+                    'Like `due date is invalid`.',
+                    'It matches tasks that have a due date and the due date is invalid, such as `2022-13-32`',
+                ],
                 [
                     "filter by function task.due.moment?.isSameOrBefore(moment(), 'day') || false",
                     'Find all tasks due today or earlier.',

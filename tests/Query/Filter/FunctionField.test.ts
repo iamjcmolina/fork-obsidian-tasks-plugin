@@ -4,9 +4,8 @@
 import moment from 'moment';
 
 import { FunctionField } from '../../../src/Query/Filter/FunctionField';
-import { Status } from '../../../src/Status';
-import type { Task } from '../../../src/Task';
-import { Priority } from '../../../src/Task';
+import { Status } from '../../../src/Statuses/Status';
+import type { Task } from '../../../src/Task/Task';
 import {
     toGroupTaskFromBuilder,
     toGroupTaskUsingSearchInfo,
@@ -19,9 +18,10 @@ import {
     expectTaskComparesBefore,
     expectTaskComparesEqual,
 } from '../../CustomMatchers/CustomMatchersForSorting';
-import { fromLine } from '../../TestHelpers';
+import { fromLine } from '../../TestingTools/TestHelpers';
 import { Query } from '../../../src/Query/Query';
 import { TasksDate } from '../../../src/Scripting/TasksDate';
+import { Priority } from '../../../src/Task/Priority';
 
 window.moment = moment;
 
@@ -226,10 +226,10 @@ describe('FunctionField - sorting', () => {
             expect(checkAndCompareSortKeys(3.15634, 1.535436)).toBeGreaterThan(0);
         });
 
-        it('should sort false boolean before true', () => {
+        it('should sort true boolean before false', () => {
             expect(checkAndCompareSortKeys(1, 1)).toEqual(SAME);
-            expect(checkAndCompareSortKeys(false, true)).toEqual(BEFORE);
-            expect(checkAndCompareSortKeys(true, false)).toEqual(AFTER);
+            expect(checkAndCompareSortKeys(false, true)).toEqual(AFTER);
+            expect(checkAndCompareSortKeys(true, false)).toEqual(BEFORE);
         });
 
         it('should sort strings case-sensitively and be number-aware', () => {
@@ -412,7 +412,7 @@ The error message was:
             expectTaskComparesAfter(sorter!, fromLine({ line: '* [ ] Hello' }), fromLine({ line: '- [ ] Hello' }));
         });
 
-        it('sort by function - boolean expression - false sorts before true', () => {
+        it('sort by function - boolean expression - true sorts before false', () => {
             // Arrange
             const sorter = new FunctionField().createSorterFromLine('sort by function task.isDone');
             const todoTask = fromLine({ line: '- [ ] todo' });
@@ -420,7 +420,8 @@ The error message was:
 
             // Assert
             expect(sorter).not.toBeNull();
-            expectTaskComparesBefore(sorter!, todoTask, doneTask);
+            expectTaskComparesAfter(sorter!, todoTask, doneTask);
+            expectTaskComparesBefore(sorter!, doneTask, todoTask);
         });
 
         it('sort by function - using query.file.path', () => {

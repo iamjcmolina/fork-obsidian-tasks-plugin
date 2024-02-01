@@ -13,7 +13,7 @@ import {
 } from '../../CustomMatchers/CustomMatchersForSorting';
 import { Query } from '../../../src/Query/Query';
 import { verifyMarkdown } from '../../TestingTools/VerifyMarkdown';
-import { SampleTasks } from '../../TestHelpers';
+import { SampleTasks } from '../../TestingTools/SampleTasks';
 import { MarkdownTable } from '../../../src/lib/MarkdownTable';
 import { Explainer } from '../../../src/Query/Explain/Explainer';
 
@@ -607,10 +607,10 @@ describe('grouping by due date', () => {
         const tasks = SampleTasks.withAllRepresentativeDueDates();
 
         expect({ grouper, tasks }).groupHeadingsToBe([
+            '%%0%% Invalid due date',
             '2023-05-30 Tuesday',
             '2023-05-31 Wednesday',
             '2023-06-01 Thursday',
-            'Invalid date',
             'No due date',
         ]);
     });

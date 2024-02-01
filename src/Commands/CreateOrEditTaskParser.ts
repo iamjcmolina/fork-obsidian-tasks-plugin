@@ -1,10 +1,12 @@
-import { Status } from '../Status';
-import { Priority, Task, TaskRegularExpressions } from '../Task';
-import { DateFallback } from '../DateFallback';
-import { StatusRegistry } from '../StatusRegistry';
-import { TaskLocation } from '../TaskLocation';
+import { Status } from '../Statuses/Status';
+import { Task } from '../Task/Task';
+import { DateFallback } from '../Task/DateFallback';
+import { StatusRegistry } from '../Statuses/StatusRegistry';
+import { TaskLocation } from '../Task/TaskLocation';
 import { getSettings } from '../Config/Settings';
 import { GlobalFilter } from '../Config/GlobalFilter';
+import { Priority } from '../Task/Priority';
+import { TaskRegularExpressions } from '../Task/TaskRegularExpressions';
 
 function getDefaultCreatedDate() {
     const { setCreatedDate } = getSettings();
@@ -89,6 +91,8 @@ export const taskFromLine = ({ line, path }: { line: string; path: string }): Ta
             doneDate: null,
             cancelledDate: null,
             recurrence: null,
+            blockedBy: [],
+            id: '',
             blockLink: '',
             tags: [],
             originalMarkdown: '',
@@ -131,5 +135,7 @@ export const taskFromLine = ({ line, path }: { line: string; path: string }): Ta
         originalMarkdown: '',
         // Not needed since the inferred status is always re-computed after submitting.
         scheduledDateIsInferred: false,
+        id: '',
+        blockedBy: [],
     });
 };

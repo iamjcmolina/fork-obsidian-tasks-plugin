@@ -4,8 +4,8 @@
 
 import moment from 'moment';
 
-import type { Task } from '../../../../src/Task';
-import { SampleTasks } from '../../../TestHelpers';
+import type { Task } from '../../../../src/Task/Task';
+import { SampleTasks } from '../../../TestingTools/SampleTasks';
 import {
     type CustomPropertyDocsTestData,
     type QueryInstructionLineAndDescription,
@@ -25,6 +25,47 @@ afterEach(() => {
 });
 
 // NEW_QUERY_INSTRUCTION_EDIT_REQUIRED
+
+describe('dependencies', () => {
+    const testData: CustomPropertyDocsTestData[] = [
+        // ---------------------------------------------------------------------------------
+        // DEPENDENCIES FIELDS
+        // ---------------------------------------------------------------------------------
+
+        [
+            'task.id',
+            [
+                [
+                    'group by function task.id',
+                    'Group by task Ids, if any.',
+                    'Note that currently there is no way to access any tasks that are blocked by these Ids.',
+                ],
+            ],
+            SampleTasks.withAllRepresentativeDependencyFields(),
+        ],
+
+        [
+            'task.blockedBy',
+            [
+                [
+                    'group by function task.blockedBy',
+                    'Group by the Ids of the tasks that each task depends on, if any',
+                    'If a task depends on more than one other task, it will be listed multiple times.',
+                    'Note that currently there is no way to access the tasks being depended on',
+                ],
+            ],
+            SampleTasks.withAllRepresentativeDependencyFields(),
+        ],
+    ];
+
+    it.each(testData)('%s results', (_: string, groups: QueryInstructionLineAndDescription[], tasks: Task[]) => {
+        verifyFunctionFieldGrouperSamplesOnTasks(groups, tasks);
+    });
+
+    it.each(testData)('%s docs', (_: string, groups: QueryInstructionLineAndDescription[], _tasks: Task[]) => {
+        verifyFunctionFieldGrouperSamplesForDocs(groups);
+    });
+});
 
 describe('dates', () => {
     const testData: CustomPropertyDocsTestData[] = [
@@ -70,7 +111,7 @@ describe('dates', () => {
             [
                 [
                     'group by function task.due.category.groupText',
-                    'Group task due dates in to 4 broad categories: `Overdue`, `Today`, `Future` and `Undated`, displayed in that order.',
+                    'Group task due dates in to 5 broad categories: `Invalid date`, `Overdue`, `Today`, `Future` and `Undated`, displayed in that order.',
                     'Try this on a line before `group by due` if there are a lot of due date headings, and you would like them to be broken down in to some kind of structure.',
                     'The values `task.due.category.name` and `task.due.category.sortOrder` are also available.',
                 ],
@@ -149,12 +190,13 @@ describe('dates', () => {
                     `group by function \\
     const date = task.due.moment; \\
     return \\
-        (!date)                           ? '%%4%% Undated' : \\
-        date.isBefore(moment(), 'day')    ? '%%1%% Overdue' : \\
-        date.isSame(moment(), 'day')      ? '%%2%% Today'   : \\
+        (!date)                           ? '%%4%% Undated' :      \\
+        !date.isValid()                   ? '%%0%% Invalid date' : \\
+        date.isBefore(moment(), 'day')    ? '%%1%% Overdue' :      \\
+        date.isSame(moment(), 'day')      ? '%%2%% Today'   :      \\
         '%%3%% Future';`,
                     'This gives exactly the same output as `group by function task.due.category.groupText`, and is shown here in case you want to customise the behaviour in some way',
-                    'Group task due dates in to 4 broad categories: `Overdue`, `Today`, `Future` and `Undated`, displayed in that order.',
+                    'Group task due dates in to 5 broad categories: `Invalid date`, `Overdue`, `Today`, `Future` and `Undated`, displayed in that order.',
                     'Try this on a line before `group by due` if there are a lot of due date headings, and you would like them to be broken down in to some kind of structure.',
                     'Note that because we use variables to avoid repetition of values, we need to add `return`',
                 ],
@@ -162,11 +204,12 @@ describe('dates', () => {
                     `group by function \\
     const date = task.due.moment; \\
     return \\
-        (!date)                           ? '%%4%% ==Undated==' : \\
-        date.isBefore(moment(), 'day')    ? '%%1%% ==Overdue==' : \\
-        date.isSame(moment(), 'day')      ? '%%2%% ==Today=='   : \\
+        (!date)                           ? '%%4%% ==Undated==' :      \\
+        !date.isValid()                   ? '%%0%% ==Invalid date==' : \\
+        date.isBefore(moment(), 'day')    ? '%%1%% ==Overdue==' :      \\
+        date.isSame(moment(), 'day')      ? '%%2%% ==Today=='   :      \\
         '%%3%% ==Future==';`,
-                    'As above, but the headings `Overdue`, `Today`, `Future` and `Undated` are highlighted.',
+                    'As above, but the headings `Invalid date`, `Overdue`, `Today`, `Future` and `Undated` are highlighted.',
                     'See the sample screenshot below',
                 ],
                 [
@@ -175,6 +218,7 @@ describe('dates', () => {
     const now = moment(); \\
     const label = (order, name) => \`%%\${order}%% ==\${name}==\`; \\
     if (!date)                      return label(4, 'Undated'); \\
+    if (!date.isValid())            return label(0, 'Invalid date'); \\
     if (date.isBefore(now, 'day'))  return label(1, 'Overdue'); \\
     if (date.isSame(now, 'day'))    return label(2, 'Today'); \\
     return label(3, 'Future');`,

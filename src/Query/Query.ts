@@ -1,17 +1,17 @@
 import { TaskLayoutOptions } from '../Layout/TaskLayoutOptions';
-import { QueryLayoutOptions } from '../QueryLayoutOptions';
+import { QueryLayoutOptions } from '../Layout/QueryLayoutOptions';
 import { expandPlaceholders } from '../Scripting/ExpandPlaceholders';
 import { makeQueryContext } from '../Scripting/QueryContext';
-import type { Task } from '../Task';
+import type { Task } from '../Task/Task';
 import type { IQuery } from '../IQuery';
 import { getSettings } from '../Config/Settings';
 import { errorMessageForException } from '../lib/ExceptionTools';
 import { logging } from '../lib/logging';
-import { Sort } from './Sort';
-import type { Sorter } from './Sorter';
-import { TaskGroups } from './TaskGroups';
+import { Sort } from './Sort/Sort';
+import type { Sorter } from './Sort/Sorter';
+import { TaskGroups } from './Group/TaskGroups';
 import * as FilterParser from './FilterParser';
-import type { Grouper } from './Grouper';
+import type { Grouper } from './Group/Grouper';
 import type { Filter } from './Filter/Filter';
 import { QueryResult } from './QueryResult';
 import { scan } from './Scanner';
@@ -34,7 +34,7 @@ export class Query implements IQuery {
     private _ignoreGlobalQuery: boolean = false;
 
     private readonly hideOptionsRegexp =
-        /^(hide|show) (task count|backlink|priority|cancelled date|created date|start date|scheduled date|done date|due date|recurrence rule|edit button|postpone button|urgency|tags)/i;
+        /^(hide|show) (task count|backlink|priority|cancelled date|created date|start date|scheduled date|done date|due date|recurrence rule|edit button|postpone button|urgency|tags|depends on|id)/i;
     private readonly shortModeRegexp = /^short/i;
     private readonly fullModeRegexp = /^full/i;
     private readonly explainQueryRegexp = /^explain/i;
@@ -314,6 +314,12 @@ Problem line: "${line}"`;
                     break;
                 case 'tags':
                     this._taskLayoutOptions.setTagsVisibility(!hide);
+                    break;
+                case 'id':
+                    this._taskLayoutOptions.setVisibility('id', !hide);
+                    break;
+                case 'depends on':
+                    this._taskLayoutOptions.setVisibility('blockedBy', !hide);
                     break;
                 default:
                     this.setError('do not understand hide/show option', line);

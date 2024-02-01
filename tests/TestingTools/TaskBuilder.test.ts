@@ -3,7 +3,7 @@
  */
 
 import moment from 'moment';
-import type { Task } from '../../src/Task';
+import type { Task } from '../../src/Task/Task';
 import { TaskBuilder } from './TaskBuilder';
 
 export {};
@@ -58,7 +58,7 @@ describe('TaskBuilder', () => {
         expect(getNullOrUnsetFields(task.taskLocation)).toEqual([]);
 
         expect(task.originalMarkdown).toEqual(
-            '  - [ ] Do exercises #todo #health 🔼 🔁 every day when done ➕ 2023-07-01 🛫 2023-07-02 ⏳ 2023-07-03 📅 2023-07-04 ❌ 2023-07-06 ✅ 2023-07-05 ^dcf64c',
+            '  - [ ] Do exercises #todo #health 🆔 abcdef ⛔️ 123456,abc123 🔼 🔁 every day when done ➕ 2023-07-01 🛫 2023-07-02 ⏳ 2023-07-03 📅 2023-07-04 ❌ 2023-07-06 ✅ 2023-07-05 ^dcf64c',
         );
     });
 });

@@ -17,6 +17,7 @@ This page is long. Here are some links to the main sections:
 - [[#Text filters]]
 - [[#Matching multiple filters]]
 - [[#Filters for Task Statuses]]
+- [[#Filters for Task Dependencies]]
 - [[#Filters for Dates in Tasks]]
 - [[#Filters for Other Task Properties]]
 - [[#Filters for File Properties]]
@@ -450,6 +451,39 @@ Find any tasks that have status symbols you have not yet added to your Tasks set
     group by path
     ```
 
+## Filters for Task Dependencies
+
+### Id
+
+- `has id`
+- `no id`
+- `id (includes|does not include) <string>`
+  - Matches case-insensitive (disregards capitalization).
+- `id (regex matches|regex does not match) /<JavaScript-style Regex>/`
+  - Does regular expression match (case-sensitive by default).
+  - Essential reading: [[Regular Expressions|Regular Expression Searches]].
+
+For more information, see [[Task Dependencies]].
+
+> [!released]
+>
+> - Task Id was introduced in Tasks X.Y.Z.
+
+Since Tasks X.Y.Z, **[[Custom Filters|custom filtering]] by Id** is now possible, using `task.id`.
+
+### Blocked By
+
+- `has blocked by`
+- `no blocked by`
+
+For more information, see [[Task Dependencies]].
+
+> [!released]
+>
+> - Task Blocked By was introduced in Tasks X.Y.Z.
+
+Since Tasks X.Y.Z, **[[Custom Filters|custom filtering]] by Blocked By** is now possible, using `task.blockedBy`.
+
 ## Filters for Dates in Tasks
 
 ### Due Date
@@ -493,6 +527,15 @@ filter by function task.due.format('dddd') === 'Tuesday'
 For users who are comfortable with JavaScript, these more complicated examples may also be of interest:
 
 <!-- placeholder to force blank line before included text --><!-- include: CustomFilteringExamples.test.dates_task.due.advanced_docs.approved.md -->
+
+```javascript
+filter by function \
+    const date = task.due.moment; \
+    return date ? !date.isValid() : false;
+```
+
+- Like `due date is invalid`.
+- It matches tasks that have a due date and the due date is invalid, such as `2022-13-32`
 
 ```javascript
 filter by function task.due.moment?.isSameOrBefore(moment(), 'day') || false
@@ -747,6 +790,8 @@ For more examples, see [[#Due Date]].
 For example, `happens before tomorrow` will return all tasks that are starting, scheduled, or due earlier than tomorrow.
 If a task starts today and is due in a week from today, `happens before tomorrow` will match,
 because the tasks starts before tomorrow. Only one of the dates needs to match.
+
+Invalid start, scheduled or due dates are ignored by `happens`.
 
 - `no happens date`
   - Return tasks where _none_ of start date, scheduled date, and due date are set.

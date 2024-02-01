@@ -1,11 +1,11 @@
-import type { Task } from '../../Task';
-import type { GrouperFunction } from '../Grouper';
-import { Grouper } from '../Grouper';
+import type { Task } from '../../Task/Task';
+import type { GrouperFunction } from '../Group/Grouper';
+import { Grouper } from '../Group/Grouper';
 import { Explanation } from '../Explain/Explanation';
 import { TaskExpression, parseAndEvaluateExpression } from '../../Scripting/TaskExpression';
 import type { QueryContext } from '../../Scripting/QueryContext';
 import type { SearchInfo } from '../SearchInfo';
-import { Sorter } from '../Sorter';
+import { Sorter } from '../Sort/Sorter';
 import { compareByDate } from '../../lib/DateTools';
 import { getValueType } from '../../lib/TypeDetection';
 import { Field } from './Field';
@@ -148,7 +148,12 @@ export class FunctionField extends Field {
             return compareByDate(valueA.moment, valueB.moment);
         }
 
-        // Treat as numeric, so it works well with booleans
+        if (valueAType === 'boolean') {
+            // We want true to come before false, as it's been found to give more intuitive behaviour.
+            // So this is the opposite way round to the calculation below.
+            return Number(valueB) - Number(valueA);
+        }
+
         // We use Number() to prevent implicit type conversion, by making the conversion explicit:
         const result = Number(valueA) - Number(valueB);
         if (isNaN(result)) {

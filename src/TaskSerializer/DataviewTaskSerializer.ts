@@ -1,6 +1,6 @@
-import type { TaskLayoutComponent } from '../TaskLayout';
-import type { Task } from '../Task';
-import { Priority } from '../Task';
+import type { TaskLayoutComponent } from '../Layout/TaskLayoutOptions';
+import type { Task } from '../Task/Task';
+import { Priority } from '../Task/Priority';
 import { DefaultTaskSerializer } from './DefaultTaskSerializer';
 
 /**
@@ -75,6 +75,8 @@ export const DATAVIEW_SYMBOLS = {
     doneDateSymbol: 'completion::',
     cancelledDateSymbol: 'cancelled::',
     recurrenceSymbol: 'repeat::',
+    idSymbol: 'id::',
+    blockedBySymbol: 'blockedBy::',
     TaskFormatRegularExpressions: {
         priorityRegex: toInlineFieldRegex(/priority:: *(highest|high|medium|low|lowest)/),
         startDateRegex: toInlineFieldRegex(/start:: *(\d{4}-\d{2}-\d{2})/),
@@ -84,6 +86,8 @@ export const DATAVIEW_SYMBOLS = {
         doneDateRegex: toInlineFieldRegex(/completion:: *(\d{4}-\d{2}-\d{2})/),
         cancelledDateRegex: toInlineFieldRegex(/cancelled:: *(\d{4}-\d{2}-\d{2})/),
         recurrenceRegex: toInlineFieldRegex(/repeat:: *([a-zA-Z0-9, !]+)/),
+        blockedByRegex: toInlineFieldRegex(/blockedBy:: *([a-z0-9]+( *, *[a-z0-9]+ *)*)$/),
+        idRegex: toInlineFieldRegex(/id:: *([a-z0-9]+)/),
     },
 } as const;
 
